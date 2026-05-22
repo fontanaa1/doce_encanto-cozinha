@@ -981,49 +981,83 @@
             });
         }
 
-        // Função de fechar pedido SEM GPS (apenas alerta)
-        window.fecharPedido = async function() {
-            if (carrinho.length === 0) { 
-                mostrarToast('🛒 O carrinho está vazio!'); 
-                return; 
+       async function fecharPedido() {
+            if (carrinho.length === 0) {
+                alert("Seu carrinho está vazio!");
+                return;
             }
+
             const nome = document.getElementById('cliente-nome').value;
-            if (!nome) { 
-                mostrarToast('📝 Por favor, informe seu nome!'); 
-                return; 
-            }
-            
-            // Atualizar contagem de pedidos do usuário
-            if (usuarioLogado && usuarioData) {
-                const users = JSON.parse(localStorage.getItem('doce_encanto_users') || '[]');
-                const userIndex = users.findIndex(u => u.email === usuarioData.email);
-                if (userIndex !== -1) {
-                    users[userIndex].pedidos = (users[userIndex].pedidos || 0) + 1;
-                    localStorage.setItem('doce_encanto_users', JSON.stringify(users));
-                }
-            }
-            
-            mostrarToast(`🎉 Pedido finalizado! Obrigado, ${nome}!`);
-            carrinho = []; 
-            fecharModalCarrinho(); 
-            atualizarCarrinho();
-            document.getElementById('cliente-nome').value = '';
-            document.getElementById('cliente-endereco').value = '';
-        };
+            const endereco = document.getElementById('cliente-endereco').value;
 
-        // =====================================
-        // INICIALIZAR
-        // =====================================
-        inicializarCarrinho();
+            if (!nome || !endereco) {
+                alert("Por favor, preencha seu nome e endereço de entrega!");
+                return;
+            }
+
+            const total = carrinho.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+            
+            const payloadPedido = {
+                cliente_nome: nome,
+                cliente_endereco: endereco,
+                itens: carrinho,
+                total: total
+            };
+
+            const btnFechar = document.getElementById('btn-fechar-pedido');
+            btnFechar.innerText = "Enviando...";
+            btnFechar.disabled = true;
+            btnFechar.classList.add("opacity-50");
+
+            try {
+                const resposta = await fetch(`${API_URL}/pedidos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payloadPedido)
+                });
+
+                if (!resposta.ok) throw new Error('Erro ao enviar pedido');
+
+                alert("Pedido enviado com sucesso para a cozinha!");
+                
+                // Limpar tudo
+                document.getElementById('cliente-nome').value = '';
+                document.getElementById('cliente-endereco').value = '';
+                carrinho = [];
+                atualizarCarrinho();
+                fecharModalCarrinho();
+            } catch (erro) {
+                console.error(erro);
+                alert("Ops! Ocorreu um problema de conexão. Tente novamente.");
+            } finally {
+                btnFechar.innerText = "Fechar Pedido";
+                btnFechar.disabled = false;
+                btnFechar.classList.remove("opacity-50");
+            }
+        }
+
+        function inicializarCarrinho() {
+            const salvo = localStorage.getItem('haruy_carrinho');
+            if (salvo) {
+                carrinho = JSON.parse(salvo);
+                atualizarCarrinho();
+            }
+        }
+        
         carregarCategorias();
+        inicializarCarrinho();
 
+        // 🚀 AULA 12: REGISTRANDO O SERVICE WORKER (PARA TRANSFORMAR EM PWA)
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('Service Worker Registrado!', reg))
-                    .catch(err => console.error('Erro ao preparar a massa: ', err));
+                .then(reg => console.log('Service Worker Registrado no Porto! 🍱', reg))
+                .catch(err => console.error('Erro ao preparar o sushi: ', err));
             });
         }
+
     </script>
 
 </body>
